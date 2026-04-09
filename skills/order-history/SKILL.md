@@ -1,3 +1,10 @@
+---
+name: order-history
+description: View past orders for the current session — list all orders or get detail on a specific order by order number.
+user-invocable: true
+metadata: {"openclaw": {"emoji": "📋"}}
+---
+
 # Skill: order-history 📋
 
 View past orders for the current session. Can show a list of all orders or detail of a specific order by order number.

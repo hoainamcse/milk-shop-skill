@@ -1,3 +1,10 @@
+---
+name: update-cart
+description: Update the quantity of an item in the cart, or remove an item. Quantity 0 removes the item. Validates against available stock.
+user-invocable: true
+metadata: {"openclaw": {"emoji": "✏️"}}
+---
+
 # Skill: update-cart ✏️
 
 Update item quantity or remove an item from the cart.

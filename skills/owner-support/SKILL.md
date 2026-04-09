@@ -1,3 +1,10 @@
+---
+name: owner-support
+description: Admin skill for the CareHub shop owner. Full access to all orders, inventory, and sales data. Only runs when the session userId matches the configured owner ID.
+user-invocable: false
+metadata: {"openclaw": {"emoji": "🛠️"}}
+---
+
 # Skill: owner-support 🛠️
 
 Admin skill for the shop owner. Only runs when `Is Owner: true` in USER.md. Provides full access to all orders, inventory, and sales data — not filtered by session.

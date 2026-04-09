@@ -1,3 +1,10 @@
+---
+name: add-to-cart
+description: Add a Blackmores product to the current session's shopping cart. Handles age safety checks, stock validation, and allergen display.
+user-invocable: true
+metadata: {"openclaw": {"emoji": "🛒"}}
+---
+
 # Skill: add-to-cart 🛒
 
 Add a product to the current session's cart.

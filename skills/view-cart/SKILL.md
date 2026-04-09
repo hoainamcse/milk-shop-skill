@@ -1,3 +1,10 @@
+---
+name: view-cart
+description: Display the current session's cart contents with product details, quantities, prices, and grand total in VND and USD.
+user-invocable: true
+metadata: {"openclaw": {"emoji": "🛒"}}
+---
+
 # Skill: view-cart 🛒
 
 Display the current session's cart contents with prices and totals.

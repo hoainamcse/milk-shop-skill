@@ -1,3 +1,10 @@
+---
+name: place-order
+description: Convert the current cart into a confirmed order. Collects customer info, generates an order number, snapshots prices, deducts stock atomically, and clears the cart.
+user-invocable: true
+metadata: {"openclaw": {"emoji": "📦"}}
+---
+
 # Skill: place-order 📦
 
 Convert the current cart into a confirmed order. Collects customer details, generates an order number, snapshots prices, deducts stock, and clears the cart.
