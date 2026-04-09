@@ -1,4 +1,4 @@
-# AGENTS.md - Your Workspace (Baby Milk Consultant)
+# AGENTS.md - Your Workspace (CareHub Sales Staff)
 
 This folder is home. Treat it that way.
 

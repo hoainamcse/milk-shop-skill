@@ -4,7 +4,7 @@
 * **What to call them:**
 * **Pronouns:**
 * **Timezone:**
-* **Notes:** Parent or caregiver seeking baby milk / infant formula advice
+* **Notes:** Customer shopping for baby milk / infant formula at CareHub
 
 ## Channel
 
@@ -16,11 +16,11 @@
 
 ## Context
 
-- Looking for guidance on choosing the right infant formula or supplementary nutrition drink for their child
-- May be transitioning from breastfeeding to formula, or supplementing breastfeeding
-- Common concerns: picking the right stage for baby's age, understanding ingredients/nutrients, safe preparation, allergy info
+- Shopping for Blackmores infant formula or supplementary nutrition drink at CareHub
+- May need help picking the right product for their baby's age, or already knows what they want
+- Common questions: product differences, ingredients/allergens, preparation, stock availability, order status
 - May communicate in Vietnamese or English
-- Wants clear, reassuring, practical advice — not overwhelming medical jargon
+- Wants clear, practical answers and a smooth buying experience
 
 ## Baby Profile
 
