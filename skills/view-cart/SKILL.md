@@ -16,12 +16,14 @@ Display the current session's cart contents with prices and totals.
 
 1. **Check session ID** — if missing, inform user their cart is empty (no session = no cart)
 
-2. **Query cart:**
+2. **Query cart** — include `price_usd` from DB for accurate USD totals:
    ```sql
    SELECT p.name, p.stage, p.pack_size_g, p.source_type,
           ci.quantity,
           p.price_vnd AS unit_price,
-          ci.quantity * p.price_vnd AS subtotal
+          p.price_usd AS unit_price_usd,
+          ci.quantity * p.price_vnd AS subtotal_vnd,
+          ci.quantity * p.price_usd AS subtotal_usd
    FROM cart_items ci
    JOIN carts c ON ci.cart_id = c.id
    JOIN products p ON ci.product_id = p.id
@@ -35,20 +37,33 @@ Display the current session's cart contents with prices and totals.
 
 ## Output Format
 
+**Web (full markdown — table OK):**
 ```
 🛒 Giỏ hàng của bạn
 
-┌─────────────────────────────────────────────────────┐
-│ Sản phẩm                    SL    Đơn giá    Thành tiền │
-├─────────────────────────────────────────────────────┤
-│ Blackmores Newborn Formula   2    450,000₫   900,000₫ │
-│ (Stage 1 · 900g)                                     │
-├─────────────────────────────────────────────────────┤
-│ TỔNG CỘNG                              900,000₫     │
-│                                        (~$36.00 USD) │
-└─────────────────────────────────────────────────────┘
+| Sản phẩm                    | SL | Đơn giá   | Thành tiền |
+|-----------------------------|----|-----------|-----------|
+| Blackmores Newborn Formula  | 2  | 450,000₫  | 900,000₫  |
+| (Stage 1 · 900g)            |    |           |           |
+
+**TỔNG CỘNG: 900,000₫** (~$36.00 USD)
 
 Dùng /update-cart để thay đổi số lượng, hoặc /place-order để đặt hàng.
+
+_Giá hiển thị là giá hiện tại. Giá chính thức được chốt tại thời điểm đặt hàng._
+```
+
+**Zalo / Discord (no tables — bullet list):**
+```
+🛒 Giỏ hàng của bạn
+
+• Blackmores Newborn Formula (Stage 1 · 900g)
+  2 hộp × 450,000₫ = 900,000₫
+
+Tổng cộng: 900,000₫ (~$36.00 USD)
+
+Nhắn /update-cart để thay đổi, /place-order để đặt hàng.
+(Giá hiển thị là giá hiện tại — chốt giá khi xác nhận đặt hàng.)
 ```
 
 ## Edge Cases

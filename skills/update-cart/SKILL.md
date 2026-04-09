@@ -23,11 +23,20 @@ Update item quantity or remove an item from the cart.
 
 2. **If quantity > 0 — update:**
    ```sql
-   -- Check stock first
-   SELECT stock_quantity FROM products WHERE id = <product_id>;
-
-   -- Update quantity
-   UPDATE cart_items SET quantity = <new_qty>
+   -- Check stock against new requested quantity
+   SELECT p.stock_quantity AS available,
+          <new_qty> AS requested,
+          MIN(p.stock_quantity, <new_qty>) AS capped_qty
+   FROM products p WHERE p.id = <product_id>;
+   ```
+   - If `available < requested`: warn parent and cap at `available`
+     ```
+     ⚠️ Chỉ còn [available] hộp trong kho. Mình cập nhật số lượng thành [available] nhé?
+     ```
+   - Use `capped_qty` for the actual update:
+   ```sql
+   -- Update quantity (use capped_qty)
+   UPDATE cart_items SET quantity = <capped_qty>
    WHERE cart_id = (SELECT id FROM carts WHERE session_id = '<session_id>')
      AND product_id = <product_id>;
    ```

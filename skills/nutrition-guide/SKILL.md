@@ -24,26 +24,26 @@ Resolve from user input:
 - By age: infer stage from baby's age
 
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT id, name, stage, age_min_months, age_max_months, description FROM products
    WHERE slug = '{slug}' OR name LIKE '%{keyword}%';"
 ```
 
 ### 2. Query all nutrients grouped by category
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT name, category FROM nutrients WHERE product_id = {id} ORDER BY category, name;"
 ```
 
 ### 3. Query all benefits grouped by body system
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT benefit, body_system FROM benefits WHERE product_id = {id} ORDER BY body_system;"
 ```
 
 ### 4. Query allergens
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT allergen, presence FROM allergens WHERE product_id = {id};"
 ```
 
@@ -92,7 +92,7 @@ For babies aged [X–X months]
 **Minerals:**
 - Iron, Zinc, Calcium, Magnesium, Iodine, and more — [brief note]
 
-**Benefits summary:**
+**Benefits summary (Web — table OK):**
 | Body System | Benefit |
 |-------------|---------|
 | Brain & cognition | ... |
@@ -100,6 +100,16 @@ For babies aged [X–X months]
 | Bones & teeth | ... |
 | Digestion | ... |
 | Growth | ... |
+
+**Benefits summary (Zalo / Discord — bullet list):**
+```
+Lợi ích theo hệ cơ quan:
+• Não & nhận thức: [benefit]
+• Miễn dịch: [benefit]
+• Xương & răng: [benefit]
+• Tiêu hóa: [benefit]
+• Tăng trưởng: [benefit]
+```
 
 ⚠️ Allergens: [list]
 

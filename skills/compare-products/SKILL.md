@@ -25,35 +25,34 @@ If not specified, ask. Products can be referenced by:
 
 ### 2. Query product basics
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT id, name, stage, age_min_months, age_max_months, pack_size_g, source_type, url
    FROM products WHERE id IN ({ids}) ORDER BY stage NULLS LAST;"
 ```
 
 ### 3. Query nutrients for both products
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT product_id, name, category FROM nutrients
    WHERE product_id IN ({ids}) ORDER BY category, name;"
 ```
 
 ### 4. Query benefits for both products
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT product_id, benefit, body_system FROM benefits
    WHERE product_id IN ({ids}) ORDER BY body_system;"
 ```
 
 ### 5. Query allergens for both products
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT product_id, allergen, presence FROM allergens WHERE product_id IN ({ids});"
 ```
 
 ## Output format
 
-Present as a comparison table:
-
+**Web (full markdown — table OK):**
 ```
 📊 Product Comparison
 
@@ -77,6 +76,26 @@ Present as a comparison table:
 
 **When to choose [Product A]:** [scenario]
 **When to choose [Product B]:** [scenario]
+```
+
+**Zalo / Discord (no tables — bullet list):**
+```
+📊 So sánh sản phẩm
+
+[Product A] (Stage X · X–X tháng · Xg)
+• DHA: ✅  ARA: ✅  GOS: ✅  Taurine: ✅
+• Allergens: Milk, Soy
+
+[Product B] (Stage Y · X–X tháng · Xg)
+• DHA: ✅  ARA: ✅  GOS: ✅  Taurine: ✅
+• Allergens: Milk, Soy lecithin
+
+Điểm khác biệt chính:
+• [Key difference 1]
+• [Key difference 2]
+
+Chọn [Product A] khi: [scenario]
+Chọn [Product B] khi: [scenario]
 ```
 
 If comparing a formula (Stage 1–3) with JNR Balance+, highlight that:

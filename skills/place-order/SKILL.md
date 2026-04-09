@@ -52,34 +52,46 @@ If any rows returned → warn parent about which items are out/low stock
 Display all items, quantities, prices, and total before finalizing.
 Ask: "Bạn xác nhận đặt hàng với thông tin trên không?"
 
-### 5. Generate order number
+### 5. Generate order number (collision-safe)
 ```sql
 SELECT 'ORD-' || strftime('%Y%m%d', 'now') || '-' ||
-       printf('%03d', COALESCE(
-         (SELECT COUNT(*) FROM orders
-          WHERE order_number LIKE 'ORD-' || strftime('%Y%m%d', 'now') || '-%'),
-         0) + 1);
+       printf('%03d',
+         COALESCE(
+           MAX(CAST(SUBSTR(order_number, 13) AS INTEGER)),
+           0
+         ) + 1
+       )
+FROM orders
+WHERE order_number LIKE 'ORD-' || strftime('%Y%m%d', 'now') || '-%';
 ```
+This reads the highest sequence suffix already used today, avoiding collisions even when past orders are cancelled.
 
 ### 6. Calculate total
 ```sql
-SELECT SUM(ci.quantity * p.price_vnd) AS total
+SELECT SUM(ci.quantity * p.price_vnd) AS total,
+       SUM(ci.quantity * p.price_usd) AS total_usd
 FROM cart_items ci
 JOIN carts c ON ci.cart_id = c.id
 JOIN products p ON ci.product_id = p.id
 WHERE c.session_id = '<session_id>';
 ```
 
-### 7. Insert order
-```sql
+### 7–10. Atomic order placement (single sqlite3 call)
+
+**CRITICAL:** Run steps 7–10 in a single `sqlite3` invocation to ensure atomicity. `last_insert_rowid()` only works correctly within the same database connection.
+
+```bash
+sqlite3 data/products.db "
+PRAGMA foreign_keys = ON;
+BEGIN;
+
+-- 7. Insert order
 INSERT INTO orders (order_number, session_id, customer_name, customer_phone,
                     customer_email, delivery_address, notes, total_vnd)
 VALUES ('<order_number>', '<session_id>', '<name>', '<phone>',
-        NULL, '<address>', '<notes>', <total>);
-```
+        NULL, '<address>', '<notes_or_empty>', <total>);
 
-### 8. Insert order items (snapshot prices)
-```sql
+-- 8. Insert order items (snapshot prices) — last_insert_rowid() valid here
 INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price_vnd, subtotal_vnd)
 SELECT last_insert_rowid(), p.id, p.name,
        ci.quantity, p.price_vnd, ci.quantity * p.price_vnd
@@ -87,10 +99,8 @@ FROM cart_items ci
 JOIN carts c ON ci.cart_id = c.id
 JOIN products p ON ci.product_id = p.id
 WHERE c.session_id = '<session_id>';
-```
 
-### 9. Deduct stock
-```sql
+-- 9. Deduct stock (guarded: only deduct if sufficient stock exists)
 UPDATE products
 SET stock_quantity = stock_quantity - (
   SELECT ci.quantity FROM cart_items ci
@@ -101,14 +111,22 @@ WHERE id IN (
   SELECT ci.product_id FROM cart_items ci
   JOIN carts c ON ci.cart_id = c.id
   WHERE c.session_id = '<session_id>'
+)
+AND stock_quantity >= (
+  SELECT ci.quantity FROM cart_items ci
+  JOIN carts c ON ci.cart_id = c.id
+  WHERE c.session_id = '<session_id>' AND ci.product_id = products.id
 );
-```
 
-### 10. Clear cart
-```sql
+-- 10. Clear cart
 DELETE FROM cart_items
 WHERE cart_id = (SELECT id FROM carts WHERE session_id = '<session_id>');
+
+COMMIT;
+"
 ```
+
+After the COMMIT, verify all cart items had stock deducted: query `changes()` or re-check stock levels. If any product's stock was insufficient (0 rows affected), the guarded UPDATE silently skipped it — in that case, ROLLBACK is already impossible post-COMMIT, so flag the issue to the parent immediately and escalate to the owner.
 
 ### 11. Update USER.md
 Set **Recent order number** to the new order number.

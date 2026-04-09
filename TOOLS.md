@@ -3,9 +3,9 @@
 ## Database
 
 - **Engine:** SQLite
-- **Path:** `/home/nhhnmm/.openclaw/workspace/data/products.db`
+- **Path:** `data/products.db`
 - **Tool:** `sqlite3` CLI via exec
-- **Usage:** `sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db "<SQL>"`
+- **Usage:** `sqlite3 data/products.db "<SQL>"`
 
 ## Schema
 
@@ -248,23 +248,36 @@ WHERE cart_id = (SELECT id FROM carts WHERE session_id = '<session_id>')
   AND quantity <= 0;
 ```
 
-### Generate next order number
+### Generate next order number (collision-safe)
 ```sql
+-- Uses MAX of today's numeric suffix — safe even when past orders are cancelled
 SELECT 'ORD-' || strftime('%Y%m%d', 'now') || '-' ||
-       printf('%03d', COALESCE(MAX(id), 0) + 1)
+       printf('%03d',
+         COALESCE(
+           MAX(CAST(SUBSTR(order_number, 13) AS INTEGER)),
+           0
+         ) + 1
+       )
 FROM orders
 WHERE order_number LIKE 'ORD-' || strftime('%Y%m%d', 'now') || '-%';
 ```
 
-### Place order (run in sequence)
-```sql
+### Place order (atomic — single sqlite3 call)
+
+**CRITICAL:** Run as one `sqlite3` call so `last_insert_rowid()` works across statements and the entire operation is atomic.
+
+```bash
+sqlite3 data/products.db "
+PRAGMA foreign_keys = ON;
+BEGIN;
+
 -- 1. Insert order
 INSERT INTO orders (order_number, session_id, customer_name, customer_phone,
-                    customer_email, delivery_address, total_vnd)
+                    customer_email, delivery_address, notes, total_vnd)
 VALUES ('<order_number>', '<session_id>', '<name>', '<phone>',
-        '<email>', '<address>', <total>);
+        NULL, '<address>', '<notes_or_empty>', <total>);
 
--- 2. Insert order items (run for each cart item)
+-- 2. Insert order items — last_insert_rowid() valid within same connection
 INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price_vnd, subtotal_vnd)
 SELECT last_insert_rowid(), p.id, p.name, ci.quantity, p.price_vnd, ci.quantity * p.price_vnd
 FROM cart_items ci
@@ -272,8 +285,9 @@ JOIN carts c ON ci.cart_id = c.id
 JOIN products p ON ci.product_id = p.id
 WHERE c.session_id = '<session_id>';
 
--- 3. Deduct stock
-UPDATE products SET stock_quantity = stock_quantity - (
+-- 3. Deduct stock (guarded: skip if stock insufficient — prevents negative stock)
+UPDATE products
+SET stock_quantity = stock_quantity - (
   SELECT ci.quantity FROM cart_items ci
   JOIN carts c ON ci.cart_id = c.id
   WHERE c.session_id = '<session_id>' AND ci.product_id = products.id
@@ -282,11 +296,21 @@ WHERE id IN (
   SELECT ci.product_id FROM cart_items ci
   JOIN carts c ON ci.cart_id = c.id
   WHERE c.session_id = '<session_id>'
+)
+AND stock_quantity >= (
+  SELECT ci.quantity FROM cart_items ci
+  JOIN carts c ON ci.cart_id = c.id
+  WHERE c.session_id = '<session_id>' AND ci.product_id = products.id
 );
 
 -- 4. Clear cart
 DELETE FROM cart_items WHERE cart_id = (SELECT id FROM carts WHERE session_id = '<session_id>');
+
+COMMIT;
+"
 ```
+
+**Known schema gap:** `stock_quantity` has no `CHECK (stock_quantity >= 0)` constraint. The `AND stock_quantity >= qty` guard on the UPDATE is the only protection against negative stock. Always include this guard on any stock-deduction UPDATE.
 
 ### List orders for a session
 ```sql
@@ -309,12 +333,37 @@ JOIN order_items oi ON o.id = oi.order_id
 WHERE o.order_number = 'ORD-20260409-001';
 ```
 
-### Update order status
+### Update order status (guarded)
 ```sql
+-- Always guard with current status to prevent backward transitions
 UPDATE orders
 SET status = '<new_status>', updated_at = datetime('now')
-WHERE order_number = '<order_number>';
+WHERE order_number = '<order_number>'
+  AND status = '<current_status>';
+-- If 0 rows affected, the order status changed — re-fetch before retrying
 ```
+
+### Restore stock on order cancellation
+```sql
+-- Run per product when cancelling an order
+UPDATE products
+SET stock_quantity = stock_quantity + (
+  SELECT oi.quantity FROM order_items oi
+  JOIN orders o ON oi.order_id = o.id
+  WHERE o.order_number = '<order_number>' AND oi.product_id = products.id
+)
+WHERE id IN (
+  SELECT oi.product_id FROM order_items oi
+  JOIN orders o ON oi.order_id = o.id
+  WHERE o.order_number = '<order_number>'
+);
+```
+
+## Owner Configuration — REQUIRED SETUP
+
+Owner Zalo userId: `2552645445751093811` (configured in SOUL.md and AGENTS.md)
+
+To update if the owner changes: replace `2552645445751093811` in SOUL.md and AGENTS.md with the new userId.
 
 ## Zalo Channel
 

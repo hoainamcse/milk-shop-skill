@@ -22,14 +22,14 @@ Resolve from user context (current product, baby's age, or explicit name).
 
 ### 2. Query preparation steps
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT step_order, instruction FROM preparation_steps
    WHERE product_id = {id} ORDER BY step_order;"
 ```
 
 ### 3. Query basic product info
 ```bash
-sqlite3 /home/nhhnmm/.openclaw/workspace/data/products.db \
+sqlite3 data/products.db \
   "SELECT name, age_min_months, age_max_months, description FROM products WHERE id = {id};"
 ```
 

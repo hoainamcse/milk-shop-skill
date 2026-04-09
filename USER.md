@@ -26,7 +26,7 @@
 
 *(Updated as the agent learns from interactions)*
 
-- **Baby's age:**
+- **Baby's age:** *(integer months only — e.g. `6`, not "6 tháng" or "0.5 years")*
 - **Current feeding:**
 - **Known allergies or sensitivities:**
 - **Health concerns:**

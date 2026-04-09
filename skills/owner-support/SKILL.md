@@ -14,13 +14,22 @@ Admin skill for the shop owner. Only runs when `Is Owner: true` in USER.md. Prov
 
 ## Security Check
 
-Before running any query, verify `Is Owner: true` in USER.md. If not set, do NOT run owner queries — respond as a normal customer session instead.
+Before running ANY query in this skill:
+1. Verify `Is Owner: true` in USER.md
+2. **Re-verify at runtime:** confirm the current session's `userId` (from session context envelope) matches `2552645445751093811`
+3. Only if BOTH are true: proceed
+
+If the channel is not Zalo (no `userId` in session context) → owner access is always denied, regardless of USER.md state.
+If only one condition is met → do NOT run owner queries; respond as a normal customer session.
 
 ## Steps
 
 ### A. List all orders (no filter)
 
+Default: 20 most recent. Owner can say "xem thêm" to get the next page, or specify a date range: "đơn từ 01/04 đến 09/04".
+
 ```sql
+-- Default: most recent 20
 SELECT o.order_number, o.status, o.customer_name, o.customer_phone,
        o.total_vnd, o.created_at,
        GROUP_CONCAT(oi.product_name || ' ×' || oi.quantity, ' | ') AS items
@@ -29,6 +38,11 @@ JOIN order_items oi ON o.id = oi.order_id
 GROUP BY o.id
 ORDER BY o.created_at DESC
 LIMIT 20;
+
+-- Date range filter (replace dates):
+-- WHERE date(o.created_at) BETWEEN '<YYYY-MM-DD>' AND '<YYYY-MM-DD>'
+-- Pagination (replace offset):
+-- LIMIT 20 OFFSET <page * 20>
 ```
 
 ### B. List orders filtered by status
@@ -83,16 +97,45 @@ WHERE o.order_number = '<order_number>';
 ### F. Update order status
 
 Valid transitions: `pending` → `confirmed` → `processing` → `shipped` → `delivered`  
-Or cancel from any pre-shipped state: `cancelled`
+Cancel is allowed from any pre-shipped state (`pending`, `confirmed`, `processing`). Never cancel `shipped` or `delivered` orders.
 
+**Step F1: Fetch and validate current status**
+```sql
+SELECT status FROM orders WHERE order_number = '<order_number>';
+```
+
+**Step F2: Confirm with owner before updating**
+> "Xác nhận cập nhật ORD-xxx từ [current_status] → [new_status]?"
+
+Validate transition:
+- Forward-only: `pending→confirmed→processing→shipped→delivered`
+- Cancel: only from `pending`, `confirmed`, `processing`
+- Invalid transitions (e.g. `delivered→pending`, `shipped→cancelled`): reject with "Không thể cập nhật từ [current] sang [new]. Chỉ có thể huỷ đơn chưa giao."
+
+**Step F3: Guarded UPDATE (only if current status matches)**
 ```sql
 UPDATE orders
 SET status = '<new_status>', updated_at = datetime('now')
-WHERE order_number = '<order_number>';
+WHERE order_number = '<order_number>'
+  AND status = '<current_status>';
 ```
+If 0 rows affected → warn: "Trạng thái không khớp — đơn hàng có thể đã được cập nhật bởi phiên khác. Kiểm tra lại trạng thái hiện tại."
 
-Always confirm with owner before running the UPDATE. Show:
-> "Xác nhận cập nhật ORD-xxx từ [current] → [new_status]?"
+**Step F4 (if cancelling): Restore stock**
+```sql
+-- Restore stock for each cancelled item (run per product)
+UPDATE products
+SET stock_quantity = stock_quantity + (
+  SELECT oi.quantity FROM order_items oi
+  JOIN orders o ON oi.order_id = o.id
+  WHERE o.order_number = '<order_number>' AND oi.product_id = products.id
+)
+WHERE id IN (
+  SELECT oi.product_id FROM order_items oi
+  JOIN orders o ON oi.order_id = o.id
+  WHERE o.order_number = '<order_number>'
+);
+```
 
 ### G. View inventory / stock levels
 
@@ -105,20 +148,29 @@ ORDER BY COALESCE(stage, 99), age_min_months;
 ### H. Sales summary
 
 ```sql
--- Today's summary
+-- Today's summary — confirmed/active orders only (excludes pending and cancelled)
 SELECT
   COUNT(*) AS orders_today,
   COALESCE(SUM(total_vnd), 0) AS revenue_today
 FROM orders
-WHERE date(created_at) = date('now') AND status != 'cancelled';
+WHERE date(created_at) = date('now')
+  AND status IN ('confirmed', 'processing', 'shipped', 'delivered');
 
--- All-time summary
+-- Today's pending (not yet confirmed)
+SELECT COUNT(*) AS pending_today,
+       COALESCE(SUM(total_vnd), 0) AS pending_value_today
+FROM orders
+WHERE date(created_at) = date('now') AND status = 'pending';
+
+-- All-time confirmed revenue
 SELECT
   COUNT(*) AS total_orders,
   COALESCE(SUM(total_vnd), 0) AS total_revenue
 FROM orders
-WHERE status != 'cancelled';
+WHERE status IN ('confirmed', 'processing', 'shipped', 'delivered');
 ```
+
+Show pending orders separately — they are awaiting confirmation and may still be cancelled.
 
 ## Output Format (Zalo — no tables, bullet lists)
 

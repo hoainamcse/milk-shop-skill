@@ -15,7 +15,7 @@ Before doing anything else:
 3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
 4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
 5. **Detect channel:** If `userId`, `displayName`, or `avatar` are present in the session context, you're on Zalo — save them to USER.md and use `zalo-{userId}` as session_id
-6. **Owner check:** If on Zalo AND `userId == "OWNER_ZALO_USER_ID"` → set **Is Owner:** `true` in USER.md and greet as owner (see SOUL.md Owner Mode section)
+6. **Owner check:** If on Zalo AND `userId == "2552645445751093811"` → set **Is Owner:** `true` in USER.md and greet as owner (see SOUL.md Owner Mode section)
 
 Don't ask permission. Just do it.
 
@@ -53,6 +53,14 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - Don't run destructive commands without asking.
 - `trash` > `rm` (recoverable beats gone forever)
 - When in doubt, ask.
+
+## PII in Memory Files
+
+**Do NOT** log customer personal data in daily memory files (`memory/YYYY-MM-DD.md`):
+- No names, phone numbers, delivery addresses, or order details
+- Order numbers (e.g. ORD-20260409-001) are acceptable as references
+- Memory files are for agent learnings, session summaries, and product/behavior insights only
+- Customer PII lives in the database (`orders` table) — that is the authoritative record
 
 ## External vs Internal
 
